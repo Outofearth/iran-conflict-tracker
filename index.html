@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美伊冲突实时追踪 | 一手源增强版（含YouMind）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="bg-gray-950 text-white">
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-4xl font-bold text-center mb-2">美伊冲突实时追踪</h1>
+    <p class="text-center text-emerald-400 mb-6">已合并YouMind一手源 + 伊朗官方媒体 • 实时更新</p>
+
+    <!-- 一手源快捷栏 -->
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10 text-sm">
+      <a href="https://en.mehrnews.com/" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">🇮🇷 Mehr News</a>
+      <a href="https://www.tasnimnews.com/en" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">🇮🇷 Tasnim</a>
+      <a href="https://www.tehrantimes.com/" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">🇮🇷 Tehran Times</a>
+      <a href="https://en.irna.ir/" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">🇮🇷 IRNA</a>
+      <a href="https://iran.liveuamap.com/" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">📍 Liveuamap</a>
+      <a href="https://www.aljazeera.com/" target="_blank" class="bg-zinc-900 p-3 rounded-2xl text-center hover:bg-zinc-800">📺 Al Jazeera</a>
+    </div>
+
+    <!-- 时间线 -->
+    <h2 class="text-2xl font-semibold mb-4">实时新闻时间线</h2>
+    <div id="timeline" class="space-y-6"></div>
+
+    <!-- 地图 -->
+    <div class="mt-12">
+      <h2 class="text-2xl font-semibold mb-4">冲突实时地图</h2>
+      <div id="map" class="h-96 rounded-3xl overflow-hidden"></div>
+    </div>
+
+    <!-- 直播 -->
+    <div class="mt-12">
+      <h2 class="text-2xl font-semibold mb-4">主要直播源</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="lives"></div>
+    </div>
+  </div>
+
+  <script>
+    // RSS（已包含YouMind风格伊朗一手源）
+    const RSS_URLS = [
+      "https://api.rss2json.com/v1/api.json?rss_url=https://en.mehrnews.com/rss",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.tasnimnews.com/en/rss",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.tehrantimes.com/rss",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.aljazeera.com/xml/rss/all.xml",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.theguardian.com/world/middleeast/rss"
+    ];
+
+    async function loadTimeline() {
+      const container = document.getElementById('timeline');
+      container.innerHTML = '<p class="text-gray-400 text-center py-8">加载一手来源中...</p>';
+      let html = '';
+      for (let url of RSS_URLS) {
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          data.items.slice(0, 4).forEach(item => {
+            html += `
+              <div class="bg-zinc-900 p-6 rounded-3xl hover:scale-[1.02] transition">
+                <p class="text-xs text-gray-500">${new Date(item.pubDate).toLocaleString('zh-CN')}</p>
+                <h3 class="font-medium mt-2">${item.title}</h3>
+                <a href="${item.link}" target="_blank" class="text-blue-400 text-sm mt-4 block">阅读原文 →</a>
+              </div>`;
+          });
+        } catch(e) {}
+      }
+      container.innerHTML = html;
+    }
+
+    // Leaflet地图（关键地点）
+    function initMap() {
+      const map = L.map('map').setView([32.5, 53], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      const keyPoints = [
+        [35.6892, 51.3890, '德黑兰'],
+        [32.6539, 51.6660, '伊斯法罕（核设施）'],
+        [29.6103, 52.5311, '设拉子'],
+        [26.55, 56.25, '霍尔木兹海峡']
+      ];
+      keyPoints.forEach(([lat, lng, name]) => L.marker([lat, lng]).addTo(map).bindPopup(name));
+    }
+
+    // 直播
+    document.getElementById('lives').innerHTML = `
+      <div class="bg-zinc-900 rounded-3xl p-6">
+        <p class="mb-3 font-medium">Al Jazeera English Live</p>
+        <iframe width="100%" height="280" src="https://www.youtube.com/embed/live_stream?channel=UCaXk4Uq1i3yqGqY1pW5k3w" frameborder="0" allowfullscreen></iframe>
+      </div>
+      <div class="bg-zinc-900 rounded-3xl p-6">
+        <p class="mb-3 font-medium">WION / Press TV 相关直播</p>
+        <iframe width="100%" height="280" src="https://www.youtube.com/embed/live_stream?channel=UC_gF9K5f6o1y6v7yqKq2q3w" frameborder="0" allowfullscreen></iframe>
+      </div>
+    `;
+
+    // 启动
+    loadTimeline();
+    initMap();
+    setInterval(loadTimeline, 30000); // 每30秒刷新
+  </script>
+</body>
+</html>
